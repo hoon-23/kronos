@@ -1,0 +1,103 @@
+@startuml natural-language-schedule
+title 자연어 일정 등록 시퀀스
+
+actor Client
+participant "ScheduleController\n(in adapter)" as Controller
+participant "ScheduleService\n(application)" as Service
+participant "ClaudeAdapter\n(out adapter)" as Claude
+participant "Claude API\n(external)" as API
+participant "ScheduleValidator\n(domain)" as Validator
+participant "PersistenceAdapter\n(out adapter)" as Persistence
+database PostgreSQL
+
+Client -> Controller : POST /api/v1/schedules/natural\n{ "text": "다음주 화요일 3시 팀 미팅" }
+Controller -> Service : createFromNaturalLanguage(text)
+
+== Claude API 자연어 파싱 ==
+Service -> Claude : parse(text)
+Claude -> API : POST /v1/messages\n(프롬프트 + 자연어 텍스트)
+API --> Claude : JSON 응답\n{ title, start_time, end_time, ... }
+Claude --> Service : CreateScheduleCommand
+
+== 일정 생성 ==
+Service -> Service : create(command)
+Service -> Validator : validate(schedule)
+Validator --> Service : 검증 통과
+Service -> Persistence : save(schedule)
+Persistence -> PostgreSQL : INSERT
+PostgreSQL --> Persistence : 저장 완료
+Persistence --> Service : Schedule
+
+Service --> Controller : Schedule
+Controller --> Client : 201 Created\nScheduleResponse
+
+@enduml
+
+@startuml crud-schedule
+title 일정 CRUD 시퀀스
+
+actor Client
+participant "ScheduleController\n(in adapter)" as Controller
+participant "ScheduleService\n(application)" as Service
+participant "ScheduleValidator\n(domain)" as Validator
+participant "PersistenceAdapter\n(out adapter)" as Persistence
+database PostgreSQL
+
+== 일정 직접 등록 ==
+Client -> Controller : POST /api/v1/schedules\n{ title, start_time, end_time, ... }
+Controller -> Service : create(command)
+Service -> Validator : validate(schedule)
+Validator --> Service : 검증 통과
+Service -> Persistence : save(schedule)
+Persistence -> PostgreSQL : INSERT
+PostgreSQL --> Persistence : 저장 완료
+Persistence --> Service : Schedule
+Service --> Controller : Schedule
+Controller --> Client : 201 Created
+
+== 일정 조회 ==
+Client -> Controller : GET /api/v1/schedules/{id}
+Controller -> Service : getById(id)
+Service -> Persistence : findById(id)
+Persistence -> PostgreSQL : SELECT
+PostgreSQL --> Persistence : row
+Persistence --> Service : Schedule
+Service --> Controller : Schedule
+Controller --> Client : 200 OK
+
+== 충돌 일정 조회 ==
+Client -> Controller : GET /api/v1/schedules/conflicts
+Controller -> Service : getConflicts()
+Service -> Persistence : findAll()
+Persistence -> PostgreSQL : SELECT ALL
+PostgreSQL --> Persistence : rows
+Persistence --> Service : List<Schedule>
+Service -> Service : 시간대 겹침 필터링
+Service --> Controller : List<Schedule>
+Controller --> Client : 200 OK
+
+== 일정 수정 ==
+Client -> Controller : PUT /api/v1/schedules/{id}
+Controller -> Service : update(command)
+Service -> Persistence : findById(id)
+Persistence --> Service : Schedule (기존)
+Service -> Validator : validate(updated)
+Validator --> Service : 검증 통과
+Service -> Persistence : save(updated)
+Persistence -> PostgreSQL : UPDATE
+Persistence --> Service : Schedule
+Service --> Controller : Schedule
+Controller --> Client : 200 OK
+
+== 일정 삭제 ==
+Client -> Controller : DELETE /api/v1/schedules/{id}
+Controller -> Service : delete(id)
+Service -> Persistence : findById(id)
+Persistence --> Service : Schedule (존재 확인)
+Service -> Persistence : delete(id)
+Persistence -> PostgreSQL : DELETE
+Persistence --> Service : 완료
+Service --> Controller : void
+Controller --> Client : 204 No Content
+
+@enduml

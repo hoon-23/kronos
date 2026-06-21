@@ -4,10 +4,12 @@ import com.kronos.application.schedule.port.inbound.CreateScheduleCommand
 import com.kronos.application.schedule.port.inbound.CreateScheduleUseCase
 import com.kronos.application.schedule.port.inbound.DeleteScheduleUseCase
 import com.kronos.application.schedule.port.inbound.GetScheduleUseCase
+import com.kronos.application.schedule.port.inbound.ParseNaturalLanguageUseCase
 import com.kronos.application.schedule.port.inbound.UpdateScheduleCommand
 import com.kronos.application.schedule.port.inbound.UpdateScheduleUseCase
 import com.kronos.application.schedule.port.outbound.DeleteSchedulePort
 import com.kronos.application.schedule.port.outbound.LoadSchedulePort
+import com.kronos.application.schedule.port.outbound.NaturalLanguageParsePort
 import com.kronos.application.schedule.port.outbound.SaveSchedulePort
 import com.kronos.domain.schedule.Schedule
 import com.kronos.domain.schedule.ScheduleValidator
@@ -22,8 +24,16 @@ class ScheduleService(
     private val saveSchedulePort: SaveSchedulePort,
     private val loadSchedulePort: LoadSchedulePort,
     private val deleteSchedulePort: DeleteSchedulePort,
-) : CreateScheduleUseCase, GetScheduleUseCase, UpdateScheduleUseCase, DeleteScheduleUseCase {
+    private val naturalLanguageParsePort: NaturalLanguageParsePort,
+) : CreateScheduleUseCase, GetScheduleUseCase, UpdateScheduleUseCase, DeleteScheduleUseCase, ParseNaturalLanguageUseCase {
 
+    // 자연어 텍스트를 Claude API로 파싱하여 일정 생성
+    override fun createFromNaturalLanguage(text: String): Schedule {
+        val command = naturalLanguageParsePort.parse(text)
+        return create(command)
+    }
+
+    // 직접 입력된 커맨드로 일정 생성
     override fun create(command: CreateScheduleCommand): Schedule {
         val schedule = Schedule(
             title = command.title,

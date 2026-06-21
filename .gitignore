@@ -41,3 +41,6 @@ out/
 
 ### macOS ###
 .DS_Store
+
+### Understand Anything ###
+.understand-anything/

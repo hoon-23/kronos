@@ -3,8 +3,10 @@ package com.kronos.infra.web
 import com.kronos.application.schedule.port.inbound.CreateScheduleUseCase
 import com.kronos.application.schedule.port.inbound.DeleteScheduleUseCase
 import com.kronos.application.schedule.port.inbound.GetScheduleUseCase
+import com.kronos.application.schedule.port.inbound.ParseNaturalLanguageUseCase
 import com.kronos.application.schedule.port.inbound.UpdateScheduleUseCase
 import com.kronos.infra.web.dto.CreateScheduleRequest
+import com.kronos.infra.web.dto.NaturalLanguageRequest
 import com.kronos.infra.web.dto.ScheduleResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -26,8 +28,16 @@ class ScheduleController(
     private val getScheduleUseCase: GetScheduleUseCase,
     private val updateScheduleUseCase: UpdateScheduleUseCase,
     private val deleteScheduleUseCase: DeleteScheduleUseCase,
+    private val parseNaturalLanguageUseCase: ParseNaturalLanguageUseCase,
 ) {
 
+    // 자연어 텍스트로 일정 등록 (Claude API 연동)
+    @PostMapping("/natural")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createFromNaturalLanguage(@Valid @RequestBody request: NaturalLanguageRequest): ScheduleResponse =
+        ScheduleResponse.from(parseNaturalLanguageUseCase.createFromNaturalLanguage(request.text))
+
+    // 직접 입력으로 일정 등록
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(@Valid @RequestBody request: CreateScheduleRequest): ScheduleResponse =
