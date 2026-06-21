@@ -2,10 +2,12 @@ package com.kronos.infra.ai
 
 import com.kronos.application.schedule.port.inbound.CreateScheduleCommand
 import com.kronos.application.schedule.port.outbound.NaturalLanguageParsePort
+import com.kronos.domain.schedule.NaturalLanguageParseException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientException
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -21,29 +23,36 @@ class ClaudeAdapter(
         .baseUrl("https://api.anthropic.com")
         .build()
 
-    // 자연어 텍스트를 Claude API에 전달하여 일정 정보(제목, 시간, 참여자)로 파싱
     override fun parse(text: String): CreateScheduleCommand {
-        val today = LocalDate.now()
-        val prompt = buildPrompt(text, today)
+        try {
+            val today = LocalDate.now()
+            val prompt = buildPrompt(text, today)
 
-        val requestBody = mapOf(
-            "model" to model,
-            "max_tokens" to 1024,
-            "messages" to listOf(mapOf("role" to "user", "content" to prompt)),
-        )
+            val requestBody = mapOf(
+                "model" to model,
+                "max_tokens" to 1024,
+                "messages" to listOf(mapOf("role" to "user", "content" to prompt)),
+            )
 
-        val response = restClient.post()
-            .uri("/v1/messages")
-            .header("x-api-key", apiKey)
-            .header("anthropic-version", "2023-06-01")
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(requestBody)
-            .retrieve()
-            .body(ClaudeResponse::class.java)
-            ?: throw IllegalStateException("Claude API 응답이 비어있습니다")
+            val response = restClient.post()
+                .uri("/v1/messages")
+                .header("x-api-key", apiKey)
+                .header("anthropic-version", "2023-06-01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(requestBody)
+                .retrieve()
+                .body(ClaudeResponse::class.java)
+                ?: throw IllegalStateException("Claude API 응답이 비어있습니다")
 
-        val json = response.content.first().text
-        return parseResponse(json)
+            val json = response.content.first().text
+            return parseResponse(json)
+        } catch (e: NaturalLanguageParseException) {
+            throw e
+        } catch (e: RestClientException) {
+            throw NaturalLanguageParseException(e)
+        } catch (e: Exception) {
+            throw NaturalLanguageParseException(e)
+        }
     }
 
     // Claude에게 전달할 시스템 프롬프트 구성

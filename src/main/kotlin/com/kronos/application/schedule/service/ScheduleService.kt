@@ -12,7 +12,10 @@ import com.kronos.application.schedule.port.outbound.LoadSchedulePort
 import com.kronos.application.schedule.port.outbound.NaturalLanguageParsePort
 import com.kronos.application.schedule.port.outbound.SaveSchedulePort
 import com.kronos.domain.schedule.Schedule
+import com.kronos.domain.schedule.ScheduleConflictException
+import com.kronos.domain.schedule.ScheduleNotFoundException
 import com.kronos.domain.schedule.ScheduleValidator
+import com.kronos.infra.cache.ScheduleCacheAdapter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -25,15 +28,14 @@ class ScheduleService(
     private val loadSchedulePort: LoadSchedulePort,
     private val deleteSchedulePort: DeleteSchedulePort,
     private val naturalLanguageParsePort: NaturalLanguageParsePort,
+    private val cacheAdapter: ScheduleCacheAdapter,
 ) : CreateScheduleUseCase, GetScheduleUseCase, UpdateScheduleUseCase, DeleteScheduleUseCase, ParseNaturalLanguageUseCase {
 
-    // 자연어 텍스트를 Claude API로 파싱하여 일정 생성
     override fun createFromNaturalLanguage(text: String): Schedule {
         val command = naturalLanguageParsePort.parse(text)
         return create(command)
     }
 
-    // 직접 입력된 커맨드로 일정 생성
     override fun create(command: CreateScheduleCommand): Schedule {
         val schedule = Schedule(
             title = command.title,
@@ -43,12 +45,19 @@ class ScheduleService(
             participants = command.participants,
         )
         ScheduleValidator.validate(schedule)
-        return saveSchedulePort.save(schedule)
+        checkConflicts(schedule)
+        val saved = saveSchedulePort.save(schedule)
+        cacheAdapter.put(saved)
+        return saved
     }
 
     @Transactional(readOnly = true)
-    override fun getById(id: UUID): Schedule =
-        loadSchedulePort.findById(id) ?: throw NoSuchElementException("일정을 찾을 수 없습니다: $id")
+    override fun getById(id: UUID): Schedule {
+        cacheAdapter.get(id)?.let { return it }
+        val schedule = loadSchedulePort.findById(id) ?: throw ScheduleNotFoundException(id)
+        cacheAdapter.put(schedule)
+        return schedule
+    }
 
     @Transactional(readOnly = true)
     override fun getByDate(date: LocalDate): List<Schedule> =
@@ -67,9 +76,9 @@ class ScheduleService(
     }
 
     override fun update(command: UpdateScheduleCommand): Schedule {
-        val existing = loadSchedulePort.findById(command.id)
-            ?: throw NoSuchElementException("일정을 찾을 수 없습니다: ${command.id}")
-        val updated = existing.copy(
+        loadSchedulePort.findById(command.id) ?: throw ScheduleNotFoundException(command.id)
+        val updated = Schedule(
+            id = command.id,
             title = command.title,
             description = command.description,
             startTime = command.startTime,
@@ -77,11 +86,24 @@ class ScheduleService(
             participants = command.participants,
         )
         ScheduleValidator.validate(updated)
-        return saveSchedulePort.save(updated)
+        checkConflicts(updated)
+        val saved = saveSchedulePort.save(updated)
+        cacheAdapter.put(saved)
+        return saved
     }
 
     override fun delete(id: UUID) {
-        loadSchedulePort.findById(id) ?: throw NoSuchElementException("일정을 찾을 수 없습니다: $id")
+        loadSchedulePort.findById(id) ?: throw ScheduleNotFoundException(id)
         deleteSchedulePort.delete(id)
+        cacheAdapter.evict(id)
+    }
+
+    private fun checkConflicts(schedule: Schedule) {
+        val conflicting = loadSchedulePort.findAll().firstOrNull {
+            it.id != schedule.id && schedule.conflictsWith(it)
+        }
+        if (conflicting != null) {
+            throw ScheduleConflictException(schedule.title, conflicting.title)
+        }
     }
 }
