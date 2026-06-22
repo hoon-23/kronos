@@ -113,31 +113,6 @@ GET  /api/v1/schedules/conflicts  # 충돌 일정 조회
 
 ---
 
-## 3주 완성 플랜
-
-### 1주차: 기본 구조 설계 및 CRUD
-- [x] 프로젝트 세팅 (Spring Boot + Kotlin + Docker)
-- [x] DDD/헥사고날 패키지 구조 설계
-- [x] 일정 기본 CRUD 구현
-- [x] PostgreSQL 연동 및 JPA 엔티티 설계
-- [ ] GitHub 레포지토리 생성 및 GitHub Actions 설정
-
-### 2주차: Claude API 연동 + Redis 캐싱
-- [ ] Claude API 연동 (자연어 파싱)
-- [ ] 자연어 → 일정 변환 로직 구현
-- [ ] 중복 일정 충돌 감지 로직
-- [ ] Redis 캐싱 적용
-- [ ] 예외 처리 및 에러 응답 설계
-
-### 3주차: 테스트 + 문서화 + 배포
-- [ ] Kotest 단위 테스트 작성
-- [ ] API 통합 테스트 작성
-- [ ] README.md 작성 (설계 의도, 실행 방법, API 문서)
-- [ ] Docker Compose 구성
-- [ ] AWS 배포 (선택사항)
-
----
-
 ## GitHub README 필수 항목
 - 프로젝트 소개 및 동기
 - 기술 스택 및 선택 이유
