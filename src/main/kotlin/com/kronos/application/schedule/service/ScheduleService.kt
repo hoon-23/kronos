@@ -15,7 +15,6 @@ import com.kronos.domain.schedule.Schedule
 import com.kronos.domain.schedule.ScheduleConflictException
 import com.kronos.domain.schedule.ScheduleNotFoundException
 import com.kronos.domain.schedule.ScheduleValidator
-import com.kronos.infra.cache.ScheduleCacheAdapter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -28,7 +27,6 @@ class ScheduleService(
     private val loadSchedulePort: LoadSchedulePort,
     private val deleteSchedulePort: DeleteSchedulePort,
     private val naturalLanguageParsePort: NaturalLanguageParsePort,
-    private val cacheAdapter: ScheduleCacheAdapter,
 ) : CreateScheduleUseCase, GetScheduleUseCase, UpdateScheduleUseCase, DeleteScheduleUseCase, ParseNaturalLanguageUseCase {
 
     override fun createFromNaturalLanguage(text: String): Schedule {
@@ -46,18 +44,12 @@ class ScheduleService(
         )
         ScheduleValidator.validate(schedule)
         checkConflicts(schedule)
-        val saved = saveSchedulePort.save(schedule)
-        cacheAdapter.put(saved)
-        return saved
+        return saveSchedulePort.save(schedule)
     }
 
     @Transactional(readOnly = true)
-    override fun getById(id: UUID): Schedule {
-        cacheAdapter.get(id)?.let { return it }
-        val schedule = loadSchedulePort.findById(id) ?: throw ScheduleNotFoundException(id)
-        cacheAdapter.put(schedule)
-        return schedule
-    }
+    override fun getById(id: UUID): Schedule =
+        loadSchedulePort.findById(id) ?: throw ScheduleNotFoundException(id)
 
     @Transactional(readOnly = true)
     override fun getByDate(date: LocalDate): List<Schedule> =
@@ -87,15 +79,12 @@ class ScheduleService(
         )
         ScheduleValidator.validate(updated)
         checkConflicts(updated)
-        val saved = saveSchedulePort.save(updated)
-        cacheAdapter.put(saved)
-        return saved
+        return saveSchedulePort.save(updated)
     }
 
     override fun delete(id: UUID) {
         loadSchedulePort.findById(id) ?: throw ScheduleNotFoundException(id)
         deleteSchedulePort.delete(id)
-        cacheAdapter.evict(id)
     }
 
     private fun checkConflicts(schedule: Schedule) {

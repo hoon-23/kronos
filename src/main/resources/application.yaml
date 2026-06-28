@@ -20,11 +20,6 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
-
 claude:
   api:
     key: ${CLAUDE_API_KEY:your-api-key-here}

@@ -28,16 +28,6 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
       - uses: actions/checkout@v4
 
@@ -56,5 +46,3 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/kronos
           SPRING_DATASOURCE_USERNAME: kronos
           SPRING_DATASOURCE_PASSWORD: kronos
-          SPRING_DATA_REDIS_HOST: localhost
-          SPRING_DATA_REDIS_PORT: 6379
