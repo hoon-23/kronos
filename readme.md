@@ -18,7 +18,6 @@
 | Framework | Spring Boot |
 | Architecture | DDD / 헥사고날 아키텍처 |
 | DB | PostgreSQL + JPA |
-| Cache | Redis |
 | AI | Claude API (Anthropic) |
 | Test | Kotest |
 | CI/CD | GitHub Actions |
@@ -41,11 +40,7 @@
 - 동일 시간대 일정 중복 체크
 - 충돌 시 경고 응답
 
-### 4. Redis 캐싱
-- 자주 조회되는 일정 캐싱
-- TTL 기반 캐시 만료 처리
-
-### 5. Kotest 테스트 코드
+### 4. Kotest 테스트 코드
 - 도메인 단위 테스트
 - API 통합 테스트
 
@@ -91,23 +86,30 @@ src/main/kotlin/com/kronos/
     │   │   └── ScheduleJpaRepository.kt
     │   └── mapper/
     │       └── ScheduleMapper.kt
-    ├── cache/
-    │   └── ScheduleCacheAdapter.kt
     └── ai/
         └── ClaudeAdapter.kt
 ```
 
 ---
 
+## API 문서
+
+서버 실행 후 아래 주소에서 확인할 수 있습니다.
+
+| 항목 | 주소 |
+|------|------|
+| Swagger UI | http://localhost:8080/swagger-ui/index.html |
+| OpenAPI JSON | http://localhost:8080/v3/api-docs |
+
 ## API 설계
 
 ```
-POST /api/v1/schedules/natural    # 자연어로 일정 등록
-POST /api/v1/schedules            # 직접 일정 등록
-GET  /api/v1/schedules            # 일정 목록 조회
-GET  /api/v1/schedules/{id}       # 일정 상세 조회
-PUT  /api/v1/schedules/{id}       # 일정 수정
-DELETE /api/v1/schedules/{id}     # 일정 삭제
-GET  /api/v1/schedules/conflicts  # 충돌 일정 조회
+POST   /api/v1/schedules/natural    # 자연어로 일정 등록 (Claude AI)
+POST   /api/v1/schedules            # 직접 일정 등록
+GET    /api/v1/schedules            # 일정 목록 조회
+GET    /api/v1/schedules/{id}       # 일정 상세 조회
+PUT    /api/v1/schedules/{id}       # 일정 수정
+DELETE /api/v1/schedules/{id}       # 일정 삭제
+GET    /api/v1/schedules/conflicts  # 충돌 일정 조회
 ```
 
