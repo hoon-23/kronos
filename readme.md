@@ -1,4 +1,4 @@
-# SmartScheduler 사이드 프로젝트 진행 방향
+# SmartScheduler 사이드 프로젝트
 
 ## 프로젝트 개요
 자연어로 일정을 등록할 수 있는 AI 연동 일정/예약 관리 API
